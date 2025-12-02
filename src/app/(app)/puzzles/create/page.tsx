@@ -108,16 +108,12 @@ export default function CreatePuzzlePage() {
       const familySnap = await getDoc(familyDoc);
 
       if (!familySnap.exists()) {
-        console.log("Creating family document:", familyId);
         await setDoc(familyDoc, {
           id: familyId,
           name: "Miller Family", // Default name
           createdBy: user?.uid || "unknown",
           createdAt: Date.now(),
         });
-        console.log("Family document created successfully");
-      } else {
-        console.log("Family document already exists");
       }
     } catch (error) {
       console.error("Error ensuring family exists:", error);
@@ -136,9 +132,6 @@ export default function CreatePuzzlePage() {
       // For now, using a default family ID - you may want to get this from user context
       const familyId = "miller-family"; // This should come from user's family membership
 
-      console.log("User:", user);
-      console.log("User UID:", user.uid);
-      console.log("Attempting to save to path:", `families/${familyId}/puzzles`);
 
       // Ensure the family document exists first
       await ensureFamilyExists(familyId);
@@ -150,11 +143,9 @@ export default function CreatePuzzlePage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      console.log("Draft saved with ID: ", docRef.id);
       alert("Draft saved successfully!");
     } catch (error) {
       console.error("Error saving draft: ", error);
-      console.error("Error details:", error.code, error.message);
       alert(`Error saving draft: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -193,11 +184,9 @@ export default function CreatePuzzlePage() {
         updatedAt: serverTimestamp(),
         publishedAt: serverTimestamp(),
       });
-      console.log("Puzzle published with ID: ", docRef.id);
       alert("Puzzle published successfully!");
     } catch (error) {
       console.error("Error publishing puzzle: ", error);
-      console.error("Error details:", error.code, error.message);
       alert(`Error publishing puzzle: ${error.message}`);
     } finally {
       setIsLoading(false);
