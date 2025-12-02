@@ -17,7 +17,7 @@ const sampleStepItems = [
 const isSuccessState = <T>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } =>
   state.status === "success" && state.data !== undefined;
 
-export default function JoinPage() {
+function JoinPage() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") ?? "/dashboard";
   const [inviteInput, setInviteInput] = useState(() => searchParams.get("invite") ?? "");
@@ -192,3 +192,5 @@ export default function JoinPage() {
     </div>
   );
 }
+
+export default JoinPage;
