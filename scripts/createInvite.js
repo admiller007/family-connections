@@ -44,7 +44,7 @@ async function main() {
     expiresAt,
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://family-connections-e5uhyoeip-lotterys-projects-1f9a4a6c.vercel.app";
   const inviteUrl = `${baseUrl}/invite/${token}`;
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(
     `Join today's Family Connections puzzle: ${inviteUrl}`,
@@ -53,6 +53,8 @@ async function main() {
   console.log("Invite token:", token);
   console.log("Invite URL:", inviteUrl);
   console.log("WhatsApp link:", whatsapp);
+  console.log("Project ID:", projectId);
+  console.log("Family ID:", familyId);
 }
 
 main().catch((error) => {

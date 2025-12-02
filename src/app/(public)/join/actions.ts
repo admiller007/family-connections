@@ -98,7 +98,9 @@ export async function acceptInviteAction(
       "Invite validated. Move to the next step to request a login link.",
     );
   } catch (error) {
-    console.error("[acceptInviteAction]", error);
+    console.error("[acceptInviteAction] Error details:", error);
+    console.error("[acceptInviteAction] Token:", rawToken);
+    console.error("[acceptInviteAction] Project ID:", process.env.FIREBASE_ADMIN_PROJECT_ID);
     return errorState("Unable to validate this invite. Try again shortly.");
   }
 }
