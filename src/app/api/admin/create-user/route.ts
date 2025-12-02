@@ -1,4 +1,5 @@
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { isUserAdmin } from "@/lib/auth/check-admin";
 import { NextRequest } from "next/server";
 
 // Generate a random 8-character alphanumeric code
@@ -36,8 +37,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Add role check here to ensure user is admin
-    // For now, any authenticated user can create users
+    // Check if user is admin
+    const adminStatus = await isUserAdmin(currentUser.uid);
+    if (!adminStatus) {
+      return Response.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
     const { email, displayName } = body;
