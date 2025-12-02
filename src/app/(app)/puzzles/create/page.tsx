@@ -1,4 +1,9 @@
-const groups = [
+"use client";
+
+import { useState } from "react";
+import { PuzzleGroup } from "@/lib/firestore/models";
+
+const initialGroups: PuzzleGroup[] = [
   {
     title: "Group 1",
     hint: "Shared location",
@@ -22,6 +27,57 @@ const groups = [
 ];
 
 export default function CreatePuzzlePage() {
+  const [groups, setGroups] = useState<PuzzleGroup[]>(initialGroups);
+  const [title, setTitle] = useState("");
+  const [publishDate, setPublishDate] = useState("");
+  const [description, setDescription] = useState("");
+
+  const updateGroupTitle = (index: number, newTitle: string) => {
+    const newGroups = [...groups];
+    newGroups[index].title = newTitle;
+    setGroups(newGroups);
+  };
+
+  const updateGroupHint = (index: number, newHint: string) => {
+    const newGroups = [...groups];
+    newGroups[index].hint = newHint;
+    setGroups(newGroups);
+  };
+
+  const updateCard = (groupIndex: number, cardIndex: number, newValue: string) => {
+    const newGroups = [...groups];
+    newGroups[groupIndex].cards[cardIndex] = newValue;
+    setGroups(newGroups);
+  };
+
+  const addCard = (groupIndex: number) => {
+    const newGroups = [...groups];
+    newGroups[groupIndex].cards.push("");
+    setGroups(newGroups);
+  };
+
+  const deleteCard = (groupIndex: number, cardIndex: number) => {
+    const newGroups = [...groups];
+    newGroups[groupIndex].cards.splice(cardIndex, 1);
+    setGroups(newGroups);
+  };
+
+  const addGroup = () => {
+    setGroups([
+      ...groups,
+      {
+        title: `Group ${groups.length + 1}`,
+        hint: "",
+        cards: [],
+      },
+    ]);
+  };
+
+  const deleteGroup = (groupIndex: number) => {
+    const newGroups = groups.filter((_, index) => index !== groupIndex);
+    setGroups(newGroups);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header className="space-y-2 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
@@ -43,6 +99,8 @@ export default function CreatePuzzlePage() {
           <label className="text-sm font-medium text-slate-700">
             Title
             <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
               placeholder="e.g. Cousin Sleepover Legends"
             />
@@ -51,6 +109,8 @@ export default function CreatePuzzlePage() {
             Publish date
             <input
               type="date"
+              value={publishDate}
+              onChange={(e) => setPublishDate(e.target.value)}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
             />
           </label>
@@ -59,6 +119,8 @@ export default function CreatePuzzlePage() {
           Description (optional)
           <textarea
             rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
             placeholder="Leave clues or instructions for your family."
           />
@@ -75,35 +137,74 @@ export default function CreatePuzzlePage() {
               Every group must have four cards before you can publish.
             </p>
           </div>
-          <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
-            Auto-balance
+          <button
+            onClick={addGroup}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Add group
           </button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {groups.map((group) => (
+          {groups.map((group, groupIndex) => (
             <article
-              key={group.title}
+              key={groupIndex}
               className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
             >
               <header className="mb-3">
-                <p className="text-xs font-semibold uppercase text-slate-500">
-                  {group.hint}
-                </p>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {group.title}
-                </h3>
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={group.hint}
+                    onChange={(e) => updateGroupHint(groupIndex, e.target.value)}
+                    className="text-xs font-semibold uppercase text-slate-500 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-400 outline-none w-full"
+                    placeholder="Hint (e.g., Shared location)"
+                  />
+                  <button
+                    onClick={() => deleteGroup(groupIndex)}
+                    className="text-slate-400 hover:text-red-600 text-xs font-semibold"
+                    title="Delete group"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={group.title}
+                  onChange={(e) => updateGroupTitle(groupIndex, e.target.value)}
+                  className="text-lg font-semibold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-400 outline-none w-full"
+                  placeholder="Group name"
+                />
               </header>
               <ul className="grid gap-2">
-                {group.cards.map((card) => (
+                {group.cards.map((card, cardIndex) => (
                   <li
-                    key={card}
-                    className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-black/5"
+                    key={cardIndex}
+                    className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-black/5 flex gap-2 items-center"
                   >
-                    {card}
+                    <input
+                      type="text"
+                      value={card}
+                      onChange={(e) => updateCard(groupIndex, cardIndex, e.target.value)}
+                      className="flex-1 outline-none bg-transparent"
+                      placeholder="Card text"
+                    />
+                    <button
+                      onClick={() => deleteCard(groupIndex, cardIndex)}
+                      className="text-slate-400 hover:text-red-600 text-xs font-semibold"
+                      title="Delete card"
+                    >
+                      ✕
+                    </button>
                   </li>
                 ))}
               </ul>
+              <button
+                onClick={() => addCard(groupIndex)}
+                className="mt-2 w-full rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 hover:border-slate-400"
+              >
+                + Add card
+              </button>
             </article>
           ))}
         </div>
@@ -112,20 +213,20 @@ export default function CreatePuzzlePage() {
       <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900">Preview grid</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {groups.flatMap((group) => group.cards).map((card) => (
+          {groups.flatMap((group) => group.cards).map((card, index) => (
             <button
-              key={card}
+              key={index}
               className="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-4 text-center text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400"
             >
-              {card}
+              {card || "(empty)"}
             </button>
           ))}
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white">
+          <button className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800">
             Save draft
           </button>
-          <button className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700">
+          <button className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             Publish to family
           </button>
           <button className="rounded-full border border-transparent px-6 py-3 text-sm font-semibold text-slate-600 underline-offset-2 hover:underline">
