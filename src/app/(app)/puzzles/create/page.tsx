@@ -146,7 +146,7 @@ export default function CreatePuzzlePage() {
       alert("Draft saved successfully!");
     } catch (error) {
       console.error("Error saving draft: ", error);
-      alert(`Error saving draft: ${error.message}`);
+      alert(`Error saving draft: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +187,7 @@ export default function CreatePuzzlePage() {
       alert("Puzzle published successfully!");
     } catch (error) {
       console.error("Error publishing puzzle: ", error);
-      alert(`Error publishing puzzle: ${error.message}`);
+      alert(`Error publishing puzzle: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsLoading(false);
     }
