@@ -14,10 +14,10 @@ const sampleStepItems = [
   "Tap the link on your phone to finish signing in and set your password.",
 ];
 
-const isSuccessState = <T>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } =>
+const isSuccessState = <T,>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } =>
   state.status === "success" && state.data !== undefined;
 
-function JoinPage() {
+export default function JoinPage() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") ?? "/dashboard";
   const [inviteInput, setInviteInput] = useState(() => searchParams.get("invite") ?? "");
@@ -192,5 +192,3 @@ function JoinPage() {
     </div>
   );
 }
-
-export default JoinPage;
