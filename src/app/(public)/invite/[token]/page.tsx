@@ -4,12 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type InvitePageProps = {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 };
 
 export default async function InviteLandingPage({ params }: InvitePageProps) {
+  const { token } = await params;
   const db = getAdminDb();
-  const inviteRef = db.doc(getInviteTokenPath(params.token));
+  const inviteRef = db.doc(getInviteTokenPath(token));
   const snapshot = await inviteRef.get();
 
   if (!snapshot.exists) {
@@ -65,7 +66,7 @@ export default async function InviteLandingPage({ params }: InvitePageProps) {
           {!isExpired ? (
             <>
               <Link
-                href={`/join?invite=${params.token}`}
+                href={`/join?invite=${token}`}
                 className="block rounded-2xl bg-slate-900 py-3 text-center text-sm font-semibold text-white"
               >
                 Continue to onboarding

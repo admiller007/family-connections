@@ -1,5 +1,5 @@
 type PuzzlePageProps = {
-  params: { puzzleId: string };
+  params: Promise<{ puzzleId: string }>;
 };
 
 const puzzle = {
@@ -39,12 +39,14 @@ const solvedGroups = [
   },
 ];
 
-export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
+export default async function PuzzlePlayerPage({ params }: PuzzlePageProps) {
+  const { puzzleId } = await params;
+
   return (
     <div className="flex flex-col gap-6">
       <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-          Puzzle #{params.puzzleId}
+          Puzzle #{puzzleId}
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">
           {puzzle.title}
