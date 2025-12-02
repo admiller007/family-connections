@@ -8,6 +8,9 @@ export async function GET() {
     console.log('NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
     console.log('FIREBASE_ADMIN_CLIENT_EMAIL:', process.env.FIREBASE_ADMIN_CLIENT_EMAIL);
     console.log('Has FIREBASE_ADMIN_PRIVATE_KEY:', !!process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+    console.log('Has FIREBASE_ADMIN_PRIVATE_KEY_B64:', !!process.env.FIREBASE_ADMIN_PRIVATE_KEY_B64);
+    console.log('Base64 key length:', process.env.FIREBASE_ADMIN_PRIVATE_KEY_B64?.length || 0);
+    console.log('Raw key length:', process.env.FIREBASE_ADMIN_PRIVATE_KEY?.length || 0);
 
     const db = getAdminDb();
 
