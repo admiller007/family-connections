@@ -27,6 +27,8 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [puzzleId, setPuzzleId] = useState<string>("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -67,6 +69,35 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
     fetchPuzzle();
   }, [user, authLoading, puzzleId]);
 
+  useEffect(() => {
+    if (!puzzleId || typeof window === "undefined") return;
+    setShareUrl(`${window.location.origin}/play/${puzzleId}`);
+  }, [puzzleId]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timeout);
+  }, [copied]);
+
+  const handleCopyLink = async () => {
+    const fallbackUrl =
+      typeof window !== "undefined" && puzzleId
+        ? `${window.location.origin}/play/${puzzleId}`
+        : puzzleId
+          ? `/play/${puzzleId}`
+          : "";
+    const linkToCopy = shareUrl || fallbackUrl;
+    if (!linkToCopy) return;
+    try {
+      await navigator.clipboard.writeText(linkToCopy);
+      setCopied(true);
+    } catch (copyError) {
+      console.error("Failed to copy share link", copyError);
+      alert("Unable to copy link. Please copy it manually.");
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -100,6 +131,8 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
   }
 
   const allCards = puzzle.groups.flatMap(group => group.cards).filter(card => card.trim());
+  const sharePath = puzzleId ? `/play/${puzzleId}` : "";
+  const resolvedShareUrl = shareUrl || sharePath;
 
   return (
     <div className="flex flex-col gap-6">
@@ -189,6 +222,49 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
           </div>
         </article>
       </section>
+
+      {puzzle.status === "published" && (
+        <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
+          <header className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Share with anyone</h2>
+            <p className="text-sm text-slate-500">
+              Send this public play link so friends and family can solve it without logging in.
+              They&apos;ll be prompted to enter a name so their stats land on the leaderboard.
+            </p>
+          </header>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              type="text"
+              readOnly
+              value={resolvedShareUrl}
+              className="flex-1 rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-700 focus:outline-none"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleCopyLink}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {copied ? "Copied!" : "Copy link"}
+              </button>
+              {sharePath && (
+                <a
+                  href={sharePath}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 text-center"
+                >
+                  Open link
+                </a>
+              )}
+            </div>
+          </div>
+          {!shareUrl && sharePath && (
+            <p className="mt-2 text-xs text-slate-500">
+              The full URL appears once the page loads; sharing the relative link also works.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }
