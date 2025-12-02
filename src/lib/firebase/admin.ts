@@ -6,18 +6,28 @@ const projectId =
   process.env.FIREBASE_ADMIN_PROJECT_ID ??
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+// Try base64 encoded key first, fallback to regular key
+const base64Key = process.env.FIREBASE_ADMIN_PRIVATE_KEY_B64;
 const rawPrivateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-console.log('[DEBUG] Raw private key length:', rawPrivateKey?.length);
-console.log('[DEBUG] First 50 chars:', rawPrivateKey?.substring(0, 50));
-console.log('[DEBUG] Last 50 chars:', rawPrivateKey?.substring(rawPrivateKey.length - 50));
 
-const privateKey = rawPrivateKey
-  ? rawPrivateKey.replace(/\\n/g, "\n").trim()
-  : undefined;
+let privateKey: string | undefined;
 
-console.log('[DEBUG] Processed private key length:', privateKey?.length);
-console.log('[DEBUG] Processed first 50 chars:', privateKey?.substring(0, 50));
-console.log('[DEBUG] Processed last 50 chars:', privateKey?.substring(privateKey.length - 50));
+if (base64Key) {
+  try {
+    privateKey = Buffer.from(base64Key, 'base64').toString('utf8');
+    console.log('[DEBUG] Using base64 decoded private key');
+  } catch (error) {
+    console.log('[DEBUG] Base64 decode failed, falling back to raw key');
+  }
+}
+
+if (!privateKey && rawPrivateKey) {
+  privateKey = rawPrivateKey.replace(/\\n/g, "\n").trim();
+  console.log('[DEBUG] Using raw private key');
+}
+
+console.log('[DEBUG] Private key starts with:', privateKey?.substring(0, 30));
+console.log('[DEBUG] Private key ends with:', privateKey?.substring(privateKey.length - 30));
 
 const hasAdminConfig = projectId && clientEmail && privateKey;
 
