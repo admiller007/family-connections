@@ -54,11 +54,10 @@ export default function DashboardPage() {
 
         const familyId = "miller-family"; // This should come from user's family membership
 
-        // Fetch draft puzzles
+        // Fetch draft puzzles (without orderBy to avoid index requirement)
         const draftsQuery = query(
           collection(clientDb, "families", familyId, "puzzles"),
-          where("status", "==", "draft"),
-          orderBy("updatedAt", "desc")
+          where("status", "==", "draft")
         );
 
         const draftsSnapshot = await getDocs(draftsQuery);
@@ -67,11 +66,17 @@ export default function DashboardPage() {
           ...doc.data()
         })) as Puzzle[];
 
-        // Fetch published puzzles
+        // Sort client-side to avoid Firestore index requirement
+        draftsData.sort((a, b) => {
+          const aTime = a.updatedAt?.toDate?.() || a.updatedAt || new Date(0);
+          const bTime = b.updatedAt?.toDate?.() || b.updatedAt || new Date(0);
+          return bTime.getTime() - aTime.getTime();
+        });
+
+        // Fetch published puzzles (without orderBy to avoid index requirement)
         const publishedQuery = query(
           collection(clientDb, "families", familyId, "puzzles"),
-          where("status", "==", "published"),
-          orderBy("updatedAt", "desc")
+          where("status", "==", "published")
         );
 
         const publishedSnapshot = await getDocs(publishedQuery);
@@ -80,11 +85,22 @@ export default function DashboardPage() {
           ...doc.data()
         })) as Puzzle[];
 
+        // Sort client-side to avoid Firestore index requirement
+        publishedData.sort((a, b) => {
+          const aTime = a.updatedAt?.toDate?.() || a.updatedAt || new Date(0);
+          const bTime = b.updatedAt?.toDate?.() || b.updatedAt || new Date(0);
+          return bTime.getTime() - aTime.getTime();
+        });
+
         setDrafts(draftsData);
         setPublished(publishedData);
       } catch (err) {
         console.error("Error fetching puzzles:", err);
-        setError("Failed to load puzzles");
+        if (err instanceof Error && err.message.includes("index")) {
+          setError("Database is being set up. Please try again in a moment.");
+        } else {
+          setError("Failed to load puzzles. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -109,10 +125,23 @@ export default function DashboardPage() {
     );
   }
 
+  const retryFetch = () => {
+    setError(null);
+    setLoading(true);
+    // Trigger re-fetch by changing a dependency
+    window.location.reload();
+  };
+
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-red-600">{error}</div>
+      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
+        <div className="text-red-600 text-center">{error}</div>
+        <button
+          onClick={retryFetch}
+          className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
