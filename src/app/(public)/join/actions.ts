@@ -19,7 +19,7 @@ const sanitizeInviteInput = (value: string | undefined | null) => {
 };
 
 export async function requestMagicLinkAction(
-  _prevState: ActionState<{ link: string; email: string }>,
+  _prevState: ActionState<{ link: string; email: string }> | ActionState<undefined>,
   formData: FormData,
 ) {
   const email = formData.get("email")?.toString().trim().toLowerCase();
@@ -56,7 +56,7 @@ export async function requestMagicLinkAction(
 }
 
 export async function acceptInviteAction(
-  _prevState: ActionState<{ token: string; familyId: string; familyName: string }>,
+  _prevState: ActionState<{ token: string; familyId: string; familyName: string }> | ActionState<undefined>,
   formData: FormData,
 ) {
   const rawToken = sanitizeInviteInput(formData.get("inviteCode")?.toString());
