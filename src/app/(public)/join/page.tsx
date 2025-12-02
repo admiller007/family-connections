@@ -14,8 +14,9 @@ const sampleStepItems = [
   "Tap the link on your phone to finish signing in and set your password.",
 ];
 
-const isSuccessState = <T,>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } =>
-  state.status === "success" && state.data !== undefined;
+function isSuccessState<T>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } {
+  return state.status === "success" && state.data !== undefined;
+}
 
 export default function JoinPage() {
   const searchParams = useSearchParams();
