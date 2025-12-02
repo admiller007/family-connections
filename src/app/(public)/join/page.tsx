@@ -38,15 +38,15 @@ export default function JoinPage() {
 
   useEffect(() => {
     if (isSuccessState(magicState)) {
-      window.localStorage.setItem("family-connections-email", magicState.data.email);
+      window.localStorage.setItem("family-connections-email", magicState.data!.email);
     }
   }, [magicState]);
 
-  const sanitizedToken = isSuccessState(inviteState) ? inviteState.data.token : null;
+  const sanitizedToken = isSuccessState(inviteState) ? inviteState.data!.token : null;
 
   const inviteSummary = useMemo(() => {
     if (isSuccessState(inviteState)) {
-      return `Connected to ${inviteState.data.familyName}.`;
+      return `Connected to ${inviteState.data!.familyName}.`;
     }
     if (inviteState.status === "error" && inviteState.message) {
       return inviteState.message;
@@ -182,10 +182,10 @@ export default function JoinPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
               Magic link preview
             </p>
-            <p className="break-all text-sm text-slate-700">{magicState.data.link}</p>
+            <p className="break-all text-sm text-slate-700">{magicState.data!.link}</p>
             <button
               type="button"
-              onClick={() => handleCopyLink(magicState.data.link)}
+              onClick={() => handleCopyLink(magicState.data!.link)}
               className="w-full rounded-2xl bg-slate-900 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
             >
               Copy link
