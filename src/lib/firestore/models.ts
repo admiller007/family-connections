@@ -23,6 +23,12 @@ export type Invite = {
   status: "active" | "revoked" | "used";
 };
 
+export type PuzzleGroup = {
+  title: string;
+  hint: string;
+  cards: string[];
+};
+
 export type Puzzle = {
   id: string;
   familyId: Family["id"];
@@ -30,6 +36,7 @@ export type Puzzle = {
   description?: string;
   dropsAt: number;
   status: "draft" | "published";
+  groups: PuzzleGroup[];
 };
 
 export const familiesCollection = "families";
