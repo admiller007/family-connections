@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   acceptInviteAction,
@@ -21,7 +21,7 @@ function isSuccessState<T>(state: ActionState<T>): state is ActionState<T> & { s
   return state.status === "success" && state.data !== undefined;
 }
 
-export default function JoinPage() {
+function JoinPageContent() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") ?? "/dashboard";
   const [inviteInput, setInviteInput] = useState(() => searchParams.get("invite") ?? "");
@@ -194,5 +194,13 @@ export default function JoinPage() {
         )}
       </section>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <JoinPageContent />
+    </Suspense>
   );
 }

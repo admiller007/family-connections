@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import {
   isSignInWithEmailLink,
   signInWithEmailLink,
@@ -14,7 +14,7 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase/client";
 import { finalizeJoinAction } from "../actions";
 
-export default function ConfirmJoinPage() {
+function ConfirmJoinPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite");
@@ -207,5 +207,13 @@ export default function ConfirmJoinPage() {
         </section>
       )}
     </div>
+  );
+}
+
+export default function ConfirmJoinPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConfirmJoinPageContent />
+    </Suspense>
   );
 }
