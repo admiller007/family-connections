@@ -40,7 +40,7 @@ export async function GET() {
     console.error('Firebase test error:', error);
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID
     }, { status: 500 });
   }
