@@ -198,12 +198,17 @@ export default function DashboardPage() {
               {drafts.map((draft) => (
                 <li
                   key={draft.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 hover:bg-slate-100 cursor-pointer transition-colors"
+                  className="rounded-2xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors"
                 >
-                  <p className="font-medium text-slate-900">{draft.title || "Untitled Puzzle"}</p>
-                  <p className="text-xs text-slate-500">
-                    Last updated {formatTimeAgo(draft.updatedAt)}
-                  </p>
+                  <a
+                    href={`/puzzles/create?edit=${draft.id}`}
+                    className="block px-4 py-3"
+                  >
+                    <p className="font-medium text-slate-900">{draft.title || "Untitled Puzzle"}</p>
+                    <p className="text-xs text-slate-500">
+                      Last updated {formatTimeAgo(draft.updatedAt)}
+                    </p>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -241,9 +246,12 @@ export default function DashboardPage() {
                       Published {formatTimeAgo(item.updatedAt)}
                     </p>
                   </div>
-                  <button className="text-sm font-semibold text-slate-700 underline-offset-2 hover:underline">
+                  <a
+                    href={`/puzzles/${item.id}`}
+                    className="text-sm font-semibold text-slate-700 underline-offset-2 hover:underline"
+                  >
                     View puzzle
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>

@@ -1,65 +1,127 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { clientDb } from "@/lib/firebase/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { PuzzleGroup } from "@/lib/firestore/models";
+
 type PuzzlePageProps = {
   params: Promise<{ puzzleId: string }>;
 };
 
-const puzzle = {
-  title: "Grandparents Day Surprise",
-  difficulty: "Tricky",
-  dropsAt: "Today, 8:00 AM",
-  strikesLeft: 3,
-};
+interface Puzzle {
+  id: string;
+  title: string;
+  description?: string;
+  status: "draft" | "published";
+  groups: PuzzleGroup[];
+  createdAt: any;
+  updatedAt: any;
+  createdBy: string;
+}
 
-const gridCards = [
-  "Astoria",
-  "June 12",
-  "Maple tree",
-  "Cherry pie",
-  "Campfire",
-  "Sunday call",
-  "Spelling bee",
-  "Milkshakes",
-  "Nana",
-  "Papa Joe",
-  "Garden swing",
-  "Vinyl records",
-  "Grand tour",
-  "Safe travels",
-  "Inside joke",
-  "Family motto",
-];
+export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
+  const { user, loading: authLoading } = useAuth();
+  const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [puzzleId, setPuzzleId] = useState<string>("");
 
-const solvedGroups = [
-  {
-    title: "Places grandparents lived",
-    cards: ["Astoria", "Grand tour", "Maple tree", "Garden swing"],
-  },
-  {
-    title: "Weekly traditions",
-    cards: ["Sunday call", "Milkshakes", "Family motto", "Inside joke"],
-  },
-];
+  useEffect(() => {
+    // Unwrap params Promise
+    params.then(({ puzzleId: id }) => {
+      setPuzzleId(id);
+    });
+  }, [params]);
 
-export default async function PuzzlePlayerPage({ params }: PuzzlePageProps) {
-  const { puzzleId } = await params;
+  useEffect(() => {
+    if (authLoading || !user || !puzzleId) return;
+
+    const fetchPuzzle = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const familyId = "miller-family"; // This should come from user's family membership
+        const puzzleDoc = doc(clientDb, "families", familyId, "puzzles", puzzleId);
+        const puzzleSnap = await getDoc(puzzleDoc);
+
+        if (puzzleSnap.exists()) {
+          const puzzleData = {
+            id: puzzleSnap.id,
+            ...puzzleSnap.data()
+          } as Puzzle;
+          setPuzzle(puzzleData);
+        } else {
+          setError("Puzzle not found");
+        }
+      } catch (err) {
+        console.error("Error fetching puzzle:", err);
+        setError("Failed to load puzzle");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPuzzle();
+  }, [user, authLoading, puzzleId]);
+
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-slate-600">Loading puzzle...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-slate-600">Please log in to view puzzles.</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-red-600">{error}</div>
+      </div>
+    );
+  }
+
+  if (!puzzle) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-slate-600">Puzzle not found.</div>
+      </div>
+    );
+  }
+
+  const allCards = puzzle.groups.flatMap(group => group.cards).filter(card => card.trim());
 
   return (
     <div className="flex flex-col gap-6">
       <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-          Puzzle #{puzzleId}
+          Puzzle #{puzzleId.slice(-8)}
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">
-          {puzzle.title}
+          {puzzle.title || "Untitled Puzzle"}
         </h1>
+        {puzzle.description && (
+          <p className="mt-2 text-slate-600">{puzzle.description}</p>
+        )}
         <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
           <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-800">
-            {puzzle.difficulty}
+            {puzzle.status === "published" ? "Published" : "Draft"}
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
-            Drops {puzzle.dropsAt}
+            {puzzle.groups.length} groups
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
-            {puzzle.strikesLeft} strikes left
+            {allCards.length} cards total
           </span>
         </div>
       </header>
@@ -76,12 +138,12 @@ export default async function PuzzlePlayerPage({ params }: PuzzlePageProps) {
             </span>
           </header>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {gridCards.map((card) => (
+            {allCards.map((card, index) => (
               <button
-                key={card}
+                key={`${card}-${index}`}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:border-slate-400"
               >
-                {card}
+                {card || "(empty)"}
               </button>
             ))}
           </div>
@@ -95,29 +157,35 @@ export default async function PuzzlePlayerPage({ params }: PuzzlePageProps) {
 
         <article className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
           <header className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Progress log</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Puzzle Groups</h2>
             <p className="text-sm text-slate-500">
-              Track solved groups and remaining strikes.
+              The groups and cards in this puzzle.
             </p>
           </header>
           <ul className="space-y-4">
-            {solvedGroups.map((group) => (
+            {puzzle.groups.map((group, index) => (
               <li
-                key={group.title}
-                className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3"
+                key={`${group.title}-${index}`}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
               >
-                <p className="text-sm font-semibold text-emerald-700">
+                <p className="text-sm font-semibold text-slate-700 mb-1">
                   {group.title}
                 </p>
-                <p className="text-xs text-emerald-600">
-                  {group.cards.join(", ")}
+                {group.hint && (
+                  <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide">
+                    {group.hint}
+                  </p>
+                )}
+                <p className="text-xs text-slate-600">
+                  {group.cards.filter(card => card.trim()).join(", ") || "No cards"}
                 </p>
               </li>
             ))}
           </ul>
           <div className="mt-6 rounded-2xl border border-slate-200 p-3 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">Strikes</p>
-            <p>{puzzle.strikesLeft} remaining before the puzzle locks.</p>
+            <p className="font-semibold text-slate-900">Puzzle Info</p>
+            <p>Status: {puzzle.status}</p>
+            <p>Created by: {puzzle.createdBy}</p>
           </div>
         </article>
       </section>
