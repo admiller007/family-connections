@@ -4,6 +4,7 @@ import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase/client";
 import { PuzzleGroup } from "@/lib/firestore/models";
+import { useAuth } from "@/components/providers/auth-provider";
 
 interface PuzzleData {
   title: string;
@@ -37,6 +38,7 @@ const initialGroups: PuzzleGroup[] = [
 ];
 
 export default function CreatePuzzlePage() {
+  const { user, loading } = useAuth();
   const [puzzleData, setPuzzleData] = useState<PuzzleData>({
     title: "",
     publishDate: "",
@@ -101,11 +103,20 @@ export default function CreatePuzzlePage() {
   };
 
   const saveDraft = async () => {
+    if (!user) {
+      alert("You must be logged in to save puzzles.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const docRef = await addDoc(collection(clientDb, "puzzles"), {
+      // For now, using a default family ID - you may want to get this from user context
+      const familyId = "miller-family"; // This should come from user's family membership
+
+      const docRef = await addDoc(collection(clientDb, "families", familyId, "puzzles"), {
         ...puzzleData,
         status: "draft",
+        createdBy: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -120,6 +131,11 @@ export default function CreatePuzzlePage() {
   };
 
   const publishToFamily = async () => {
+    if (!user) {
+      alert("You must be logged in to publish puzzles.");
+      return;
+    }
+
     if (!puzzleData.title.trim()) {
       alert("Please enter a title for your puzzle.");
       return;
@@ -132,9 +148,13 @@ export default function CreatePuzzlePage() {
 
     setIsLoading(true);
     try {
-      const docRef = await addDoc(collection(clientDb, "puzzles"), {
+      // For now, using a default family ID - you may want to get this from user context
+      const familyId = "miller-family"; // This should come from user's family membership
+
+      const docRef = await addDoc(collection(clientDb, "families", familyId, "puzzles"), {
         ...puzzleData,
         status: "published",
+        createdBy: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         publishedAt: serverTimestamp(),
@@ -148,6 +168,22 @@ export default function CreatePuzzlePage() {
       setIsLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-slate-600">Please log in to create puzzles.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
