@@ -23,7 +23,7 @@ export async function requestMagicLinkAction(
   formData: FormData,
 ) {
   const email = formData.get("email")?.toString().trim().toLowerCase();
-  const inviteToken = sanitizeInviteInput(formData.get("inviteToken"));
+  const inviteToken = sanitizeInviteInput(formData.get("inviteToken")?.toString());
   const redirectTarget = formData.get("redirectTarget")?.toString() ?? "";
   const sanitizedRedirect =
     redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")
@@ -59,7 +59,7 @@ export async function acceptInviteAction(
   _prevState: ActionState<{ token: string; familyId: string; familyName: string }>,
   formData: FormData,
 ) {
-  const rawToken = sanitizeInviteInput(formData.get("inviteCode"));
+  const rawToken = sanitizeInviteInput(formData.get("inviteCode")?.toString());
   if (!rawToken) {
     return errorState("Paste a valid invite link or code.");
   }
