@@ -5,9 +5,8 @@ import { useSearchParams } from "next/navigation";
 import {
   acceptInviteAction,
   requestMagicLinkAction,
-  type ActionState,
 } from "./actions";
-import { initialActionState } from "./action-state";
+import { initialActionState, type ActionState } from "./action-state";
 
 const sampleStepItems = [
   "Paste the WhatsApp invite link to confirm you're in the right family.",
