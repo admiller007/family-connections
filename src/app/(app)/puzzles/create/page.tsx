@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase/client";
 import { PuzzleGroup } from "@/lib/firestore/models";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -102,6 +102,29 @@ export default function CreatePuzzlePage() {
     setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
+  const ensureFamilyExists = async (familyId: string) => {
+    try {
+      const familyDoc = doc(clientDb, "families", familyId);
+      const familySnap = await getDoc(familyDoc);
+
+      if (!familySnap.exists()) {
+        console.log("Creating family document:", familyId);
+        await setDoc(familyDoc, {
+          id: familyId,
+          name: "Miller Family", // Default name
+          createdBy: user?.uid || "unknown",
+          createdAt: Date.now(),
+        });
+        console.log("Family document created successfully");
+      } else {
+        console.log("Family document already exists");
+      }
+    } catch (error) {
+      console.error("Error ensuring family exists:", error);
+      throw error;
+    }
+  };
+
   const saveDraft = async () => {
     if (!user) {
       alert("You must be logged in to save puzzles.");
@@ -112,6 +135,13 @@ export default function CreatePuzzlePage() {
     try {
       // For now, using a default family ID - you may want to get this from user context
       const familyId = "miller-family"; // This should come from user's family membership
+
+      console.log("User:", user);
+      console.log("User UID:", user.uid);
+      console.log("Attempting to save to path:", `families/${familyId}/puzzles`);
+
+      // Ensure the family document exists first
+      await ensureFamilyExists(familyId);
 
       const docRef = await addDoc(collection(clientDb, "families", familyId, "puzzles"), {
         ...puzzleData,
@@ -124,7 +154,8 @@ export default function CreatePuzzlePage() {
       alert("Draft saved successfully!");
     } catch (error) {
       console.error("Error saving draft: ", error);
-      alert("Error saving draft. Please try again.");
+      console.error("Error details:", error.code, error.message);
+      alert(`Error saving draft: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +182,9 @@ export default function CreatePuzzlePage() {
       // For now, using a default family ID - you may want to get this from user context
       const familyId = "miller-family"; // This should come from user's family membership
 
+      // Ensure the family document exists first
+      await ensureFamilyExists(familyId);
+
       const docRef = await addDoc(collection(clientDb, "families", familyId, "puzzles"), {
         ...puzzleData,
         status: "published",
@@ -163,7 +197,8 @@ export default function CreatePuzzlePage() {
       alert("Puzzle published successfully!");
     } catch (error) {
       console.error("Error publishing puzzle: ", error);
-      alert("Error publishing puzzle. Please try again.");
+      console.error("Error details:", error.code, error.message);
+      alert(`Error publishing puzzle: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
