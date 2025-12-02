@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { doc, getDoc, addDoc, collection, serverTimestamp, getDocs } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase/client";
 import { PuzzleGroup } from "@/lib/firestore/models";
 
@@ -30,6 +30,17 @@ interface GameState {
   endTime?: Date;
 }
 
+interface PuzzleStat {
+  id: string;
+  playerName: string;
+  attempts: number;
+  strikes: number;
+  solved: boolean;
+  duration: number;
+  completedAt?: Date;
+  solvedGroups: number;
+}
+
 export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +56,9 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
     gameStatus: "playing",
     startTime: new Date(),
   });
+  const [leaderboard, setLeaderboard] = useState<PuzzleStat[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
   useEffect(() => {
     params.then(({ puzzleId: id }) => {
@@ -90,6 +104,51 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
     fetchPuzzle();
   }, [puzzleId]);
 
+  const loadLeaderboard = useCallback(async () => {
+    if (!puzzleId) return;
+
+    try {
+      setLeaderboardError(null);
+      setLeaderboardLoading(true);
+
+      const statsRef = collection(clientDb, "families", "miller-family", "puzzles", puzzleId, "stats");
+      const statsSnap = await getDocs(statsRef);
+
+      const statsData = statsSnap.docs.map(statDoc => {
+        const data = statDoc.data();
+        const completedAt = typeof data.completedAt?.toDate === "function"
+          ? data.completedAt.toDate()
+          : undefined;
+
+        return {
+          id: statDoc.id,
+          playerName: data.playerName || "Anonymous",
+          attempts: typeof data.attempts === "number" ? data.attempts : 0,
+          strikes: typeof data.strikes === "number" ? data.strikes : 0,
+          solved: Boolean(data.solved),
+          duration: typeof data.duration === "number" ? data.duration : 0,
+          completedAt,
+          solvedGroups: typeof data.solvedGroups === "number" ? data.solvedGroups : 0,
+        } as PuzzleStat;
+      }).sort((a, b) => {
+        if (a.solved !== b.solved) return a.solved ? -1 : 1;
+        if (a.solvedGroups !== b.solvedGroups) return b.solvedGroups - a.solvedGroups;
+        if (a.strikes !== b.strikes) return a.strikes - b.strikes;
+        if (a.attempts !== b.attempts) return a.attempts - b.attempts;
+        if (a.duration !== b.duration) return a.duration - b.duration;
+        return (a.completedAt?.getTime() ?? 0) - (b.completedAt?.getTime() ?? 0);
+      });
+
+      setLeaderboard(statsData.slice(0, 20));
+    } catch (err) {
+      console.error("Error loading leaderboard:", err);
+      setLeaderboardError("Failed to load leaderboard");
+      setLeaderboard([]);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [puzzleId]);
+
   useEffect(() => {
     if (!puzzle) return;
     setGameState({
@@ -104,6 +163,11 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
     setShowUsernameModal(false);
   }, [puzzle?.id]);
 
+  useEffect(() => {
+    if (!puzzleId) return;
+    loadLeaderboard();
+  }, [puzzleId, loadLeaderboard]);
+
   const shuffledCards = useMemo(() => {
     if (!puzzle) return [];
     const cards = puzzle.groups
@@ -115,6 +179,14 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
       .sort((a, b) => a.sortKey - b.sortKey)
       .map(item => item.card);
   }, [puzzle?.id]);
+
+  const formatDuration = (durationMs: number) => {
+    if (!durationMs || durationMs < 0) return "—";
+    const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   const toggleCardSelection = (card: string) => {
     if (gameState.gameStatus !== "playing") return;
@@ -194,11 +266,18 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
       });
 
       setShowUsernameModal(false);
+      setUsername("");
       alert(`Stats saved for ${playerName}!`);
+      void loadLeaderboard();
     } catch (error) {
       console.error("Error saving stats:", error);
       alert("Failed to save stats");
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowUsernameModal(false);
+    setUsername("");
   };
 
   const handleUsernameSubmit = (e: React.FormEvent) => {
@@ -386,6 +465,73 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
           </article>
         </div>
 
+        <article className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
+          <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Leaderboard</h2>
+              <p className="text-sm text-slate-500">
+                See how other players performed on this puzzle.
+              </p>
+            </div>
+            <button
+              onClick={() => loadLeaderboard()}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              disabled={leaderboardLoading}
+            >
+              {leaderboardLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </header>
+
+          {leaderboardError && (
+            <p className="mb-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              {leaderboardError}
+            </p>
+          )}
+
+          {leaderboardLoading && leaderboard.length === 0 ? (
+            <p className="text-sm text-slate-500">Loading leaderboard...</p>
+          ) : leaderboard.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Be the first to save your stats and claim the top spot!
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-slate-500 tracking-wide">
+                    <th className="py-2 pr-4">#</th>
+                    <th className="py-2 pr-4">Player</th>
+                    <th className="py-2 pr-4">Result</th>
+                    <th className="py-2 pr-4">Attempts</th>
+                    <th className="py-2 pr-4">Strikes</th>
+                    <th className="py-2 pr-4">Time</th>
+                    <th className="py-2">Saved</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leaderboard.map((stat, index) => (
+                    <tr key={stat.id} className={index === 0 ? "bg-slate-50" : ""}>
+                      <td className="py-2 pr-4 font-semibold text-slate-500">{index + 1}</td>
+                      <td className="py-2 pr-4 font-semibold text-slate-900">{stat.playerName}</td>
+                      <td className="py-2 pr-4">
+                        {stat.solved
+                          ? <span className="text-green-600 font-semibold">Solved</span>
+                          : `${stat.solvedGroups}/4 groups`}
+                      </td>
+                      <td className="py-2 pr-4">{stat.attempts}</td>
+                      <td className="py-2 pr-4">{stat.strikes}</td>
+                      <td className="py-2 pr-4">{formatDuration(stat.duration)}</td>
+                      <td className="py-2 text-slate-500">
+                        {stat.completedAt ? stat.completedAt.toLocaleString() : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </article>
+
         {/* Username Modal */}
         {showUsernameModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -410,7 +556,7 @@ export default function PublicPuzzlePage({ params }: PublicPuzzlePageProps) {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowUsernameModal(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel

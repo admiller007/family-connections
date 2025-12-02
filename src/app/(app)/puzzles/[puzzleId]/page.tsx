@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { useState, useEffect, useCallback } from "react";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase/client";
 import { useAuth } from "@/components/providers/auth-provider";
 import { PuzzleGroup } from "@/lib/firestore/models";
@@ -21,6 +21,17 @@ interface Puzzle {
   createdBy: string;
 }
 
+interface PuzzleStat {
+  id: string;
+  playerName: string;
+  attempts: number;
+  strikes: number;
+  solved: boolean;
+  duration: number;
+  completedAt?: Date;
+  solvedGroups: number;
+}
+
 export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
   const { user, loading: authLoading } = useAuth();
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
@@ -29,6 +40,9 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
   const [puzzleId, setPuzzleId] = useState<string>("");
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState<PuzzleStat[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -79,6 +93,55 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
     const timeout = setTimeout(() => setCopied(false), 2000);
     return () => clearTimeout(timeout);
   }, [copied]);
+
+  const loadStats = useCallback(async () => {
+    if (!puzzleId) return;
+
+    try {
+      setStatsError(null);
+      setStatsLoading(true);
+
+      const statsRef = collection(clientDb, "families", "miller-family", "puzzles", puzzleId, "stats");
+      const statsSnap = await getDocs(statsRef);
+      const statsData = statsSnap.docs.map(statDoc => {
+        const data = statDoc.data();
+        const completedAt = typeof data.completedAt?.toDate === "function"
+          ? data.completedAt.toDate()
+          : undefined;
+
+        return {
+          id: statDoc.id,
+          playerName: data.playerName || "Anonymous",
+          attempts: typeof data.attempts === "number" ? data.attempts : 0,
+          strikes: typeof data.strikes === "number" ? data.strikes : 0,
+          solved: Boolean(data.solved),
+          duration: typeof data.duration === "number" ? data.duration : 0,
+          completedAt,
+          solvedGroups: typeof data.solvedGroups === "number" ? data.solvedGroups : 0,
+        } as PuzzleStat;
+      }).sort((a, b) => {
+        if (a.solved !== b.solved) return a.solved ? -1 : 1;
+        if (a.solvedGroups !== b.solvedGroups) return b.solvedGroups - a.solvedGroups;
+        if (a.strikes !== b.strikes) return a.strikes - b.strikes;
+        if (a.attempts !== b.attempts) return a.attempts - b.attempts;
+        if (a.duration !== b.duration) return a.duration - b.duration;
+        return (a.completedAt?.getTime() ?? 0) - (b.completedAt?.getTime() ?? 0);
+      });
+
+      setStats(statsData);
+    } catch (err) {
+      console.error("Error loading puzzle stats:", err);
+      setStatsError("Failed to load leaderboard");
+      setStats([]);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [puzzleId]);
+
+  useEffect(() => {
+    if (!puzzleId) return;
+    loadStats();
+  }, [puzzleId, loadStats]);
 
   const handleCopyLink = async () => {
     const fallbackUrl =
@@ -133,6 +196,13 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
   const allCards = puzzle.groups.flatMap(group => group.cards).filter(card => card.trim());
   const sharePath = puzzleId ? `/play/${puzzleId}` : "";
   const resolvedShareUrl = shareUrl || sharePath;
+  const formatDuration = (durationMs: number) => {
+    if (!durationMs || durationMs < 0) return "—";
+    const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -265,6 +335,69 @@ export default function PuzzlePlayerPage({ params }: PuzzlePageProps) {
           )}
         </section>
       )}
+
+      <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
+        <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Leaderboard</h2>
+            <p className="text-sm text-slate-500">
+              Track everyone who has saved their stats for this puzzle.
+            </p>
+          </div>
+          <button
+            onClick={() => loadStats()}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            disabled={statsLoading}
+          >
+            {statsLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </header>
+
+        {statsError && (
+          <p className="mb-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{statsError}</p>
+        )}
+
+        {statsLoading && stats.length === 0 ? (
+          <p className="text-sm text-slate-500">Loading leaderboard...</p>
+        ) : stats.length === 0 ? (
+          <p className="text-sm text-slate-500">No one has saved stats yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase text-slate-500 tracking-wide">
+                  <th className="py-2 pr-4">#</th>
+                  <th className="py-2 pr-4">Player</th>
+                  <th className="py-2 pr-4">Result</th>
+                  <th className="py-2 pr-4">Attempts</th>
+                  <th className="py-2 pr-4">Strikes</th>
+                  <th className="py-2 pr-4">Time</th>
+                  <th className="py-2">Saved</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stats.map((stat, index) => (
+                  <tr key={stat.id} className={index === 0 ? "bg-slate-50" : ""}>
+                    <td className="py-2 pr-4 font-semibold text-slate-500">{index + 1}</td>
+                    <td className="py-2 pr-4 font-semibold text-slate-900">{stat.playerName}</td>
+                    <td className="py-2 pr-4">
+                      {stat.solved
+                        ? <span className="text-green-600 font-semibold">Solved</span>
+                        : `${stat.solvedGroups}/4 groups`}
+                    </td>
+                    <td className="py-2 pr-4">{stat.attempts}</td>
+                    <td className="py-2 pr-4">{stat.strikes}</td>
+                    <td className="py-2 pr-4">{formatDuration(stat.duration)}</td>
+                    <td className="py-2 text-slate-500">
+                      {stat.completedAt ? stat.completedAt.toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
