@@ -34,22 +34,22 @@ export default function LandingPage() {
         </p>
         <div className="flex flex-col justify-center gap-3 sm:flex-row">
           <Link
-            href="/join"
+            href="/login"
             className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Join with invite link
+            Log in
+          </Link>
+          <Link
+            href="/join"
+            className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900"
+          >
+            Join with invite
           </Link>
           <Link
             href="/login-with-code"
             className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900"
           >
-            Log in with code
-          </Link>
-          <Link
-            href="/dashboard"
-            className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900"
-          >
-            View creator tools
+            Login with code
           </Link>
         </div>
       </header>

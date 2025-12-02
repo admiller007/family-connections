@@ -1,7 +1,9 @@
 "use client";
 
 import { useAuth } from "@/components/providers/auth-provider";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useState } from "react";
+import Link from "next/link";
 
 type UserCode = {
   id: string;
@@ -14,6 +16,7 @@ type UserCode = {
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,6 +80,43 @@ export default function AdminUsersPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
+
+  if (adminLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="text-sm text-slate-500">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col gap-6">
+        <section className="space-y-4 rounded-3xl bg-red-50 p-5 shadow-sm ring-1 ring-red-100 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-2xl">🚫</div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-red-900">
+                Access Denied
+              </h2>
+              <p className="mt-1 text-sm text-red-700">
+                You don&apos;t have permission to access the admin panel.
+                Only administrators can create and manage users.
+              </p>
+              <div className="mt-4">
+                <Link
+                  href="/dashboard"
+                  className="inline-block rounded-2xl bg-red-900 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                >
+                  Return to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
