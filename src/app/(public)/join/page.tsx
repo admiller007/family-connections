@@ -8,6 +8,9 @@ import {
 } from "./actions";
 import { initialActionState, type ActionState } from "./action-state";
 
+const inviteInitialState: ActionState<{ token: string; familyId: string; familyName: string }> = { status: "idle" };
+const magicInitialState: ActionState<{ link: string; email: string }> = { status: "idle" };
+
 const sampleStepItems = [
   "Paste the WhatsApp invite link to confirm you're in the right family.",
   "Drop an email to generate a shareable one-time magic link.",
@@ -25,12 +28,12 @@ export default function JoinPage() {
 
   const [inviteState, acceptInviteDispatch] = useActionState(
     acceptInviteAction,
-    initialActionState,
+    inviteInitialState,
   );
 
   const [magicState, requestMagicLinkDispatch] = useActionState(
     requestMagicLinkAction,
-    initialActionState,
+    magicInitialState,
   );
 
   useEffect(() => {
