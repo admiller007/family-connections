@@ -65,9 +65,18 @@ export async function acceptInviteAction(
   }
 
   try {
+    console.log("[DEBUG] Environment check:");
+    console.log("- FIREBASE_ADMIN_PROJECT_ID:", process.env.FIREBASE_ADMIN_PROJECT_ID);
+    console.log("- NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+    console.log("- Has FIREBASE_ADMIN_PRIVATE_KEY:", !!process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+    console.log("- Token being searched:", rawToken);
+
     const db = getAdminDb();
     const inviteRef = db.doc(getInviteTokenPath(rawToken));
+    console.log("[DEBUG] Document path:", getInviteTokenPath(rawToken));
+
     const snapshot = await inviteRef.get();
+    console.log("[DEBUG] Document exists:", snapshot.exists);
 
     if (!snapshot.exists) {
       return errorState("Invite not found. Ask your family to generate a new link.");
