@@ -14,10 +14,8 @@ const sampleStepItems = [
   "Tap the link on your phone to finish signing in and set your password.",
 ];
 
-type SuccessState<T> = ActionState<T> & { status: "success"; data: T };
-
-const isSuccessState = <T,>(state: ActionState<T>): state is SuccessState<T> =>
-  state.status === "success" && Boolean(state.data);
+const isSuccessState = <T>(state: ActionState<T>): state is ActionState<T> & { status: "success"; data: T } =>
+  state.status === "success" && state.data !== undefined;
 
 export default function JoinPage() {
   const searchParams = useSearchParams();
@@ -26,12 +24,12 @@ export default function JoinPage() {
 
   const [inviteState, acceptInviteDispatch] = useActionState(
     acceptInviteAction,
-    initialActionState as ActionState<{ token: string; familyId: string; familyName: string }>,
+    initialActionState,
   );
 
   const [magicState, requestMagicLinkDispatch] = useActionState(
     requestMagicLinkAction,
-    initialActionState as ActionState<{ link: string; email: string }>,
+    initialActionState,
   );
 
   useEffect(() => {
