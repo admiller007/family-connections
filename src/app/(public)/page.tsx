@@ -40,6 +40,12 @@ export default function LandingPage() {
             Join with invite link
           </Link>
           <Link
+            href="/login-with-code"
+            className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900"
+          >
+            Log in with code
+          </Link>
+          <Link
             href="/dashboard"
             className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900"
           >

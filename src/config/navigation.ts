@@ -7,4 +7,5 @@ export const appNavLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/puzzles/create", label: "Create puzzle" },
   { href: "/invites", label: "Invites" },
+  { href: "/admin/users", label: "Admin" },
 ];
