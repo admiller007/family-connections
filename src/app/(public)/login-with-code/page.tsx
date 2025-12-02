@@ -34,8 +34,11 @@ export default function LoginWithCodePage() {
       // Sign in with the temporary password
       await signInWithEmailAndPassword(clientAuth, email, data.tempPassword);
 
-      // Redirect to onboarding to set username and password
-      router.push("/onboarding");
+      // Wait a moment for auth state to update, then redirect to dashboard
+      // The ProtectedContent component will automatically redirect to onboarding if needed
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setLoading(false);
