@@ -42,6 +42,8 @@ async function fetchRecentInvites(): Promise<InviteRecord[]> {
 
 const baseAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+export const dynamic = 'force-dynamic';
+
 export default async function InvitesPage() {
   const invites = await fetchRecentInvites();
 
