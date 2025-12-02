@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { clientDb } from "@/lib/firebase/client";
 import { PuzzleGroup } from "@/lib/firestore/models";
+
+interface PuzzleData {
+  title: string;
+  publishDate: string;
+  description: string;
+  groups: PuzzleGroup[];
+  status: "draft" | "published";
+}
 
 const initialGroups: PuzzleGroup[] = [
   {
@@ -27,55 +37,116 @@ const initialGroups: PuzzleGroup[] = [
 ];
 
 export default function CreatePuzzlePage() {
-  const [groups, setGroups] = useState<PuzzleGroup[]>(initialGroups);
-  const [title, setTitle] = useState("");
-  const [publishDate, setPublishDate] = useState("");
-  const [description, setDescription] = useState("");
+  const [puzzleData, setPuzzleData] = useState<PuzzleData>({
+    title: "",
+    publishDate: "",
+    description: "",
+    groups: initialGroups,
+    status: "draft",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (field: keyof Omit<PuzzleData, "groups">, value: string) => {
+    setPuzzleData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const updateGroupTitle = (index: number, newTitle: string) => {
-    const newGroups = [...groups];
+    const newGroups = [...puzzleData.groups];
     newGroups[index].title = newTitle;
-    setGroups(newGroups);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const updateGroupHint = (index: number, newHint: string) => {
-    const newGroups = [...groups];
+    const newGroups = [...puzzleData.groups];
     newGroups[index].hint = newHint;
-    setGroups(newGroups);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const updateCard = (groupIndex: number, cardIndex: number, newValue: string) => {
-    const newGroups = [...groups];
+    const newGroups = [...puzzleData.groups];
     newGroups[groupIndex].cards[cardIndex] = newValue;
-    setGroups(newGroups);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const addCard = (groupIndex: number) => {
-    const newGroups = [...groups];
+    const newGroups = [...puzzleData.groups];
     newGroups[groupIndex].cards.push("");
-    setGroups(newGroups);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const deleteCard = (groupIndex: number, cardIndex: number) => {
-    const newGroups = [...groups];
+    const newGroups = [...puzzleData.groups];
     newGroups[groupIndex].cards.splice(cardIndex, 1);
-    setGroups(newGroups);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const addGroup = () => {
-    setGroups([
-      ...groups,
+    const newGroups = [
+      ...puzzleData.groups,
       {
-        title: `Group ${groups.length + 1}`,
+        title: `Group ${puzzleData.groups.length + 1}`,
         hint: "",
         cards: [],
       },
-    ]);
+    ];
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
   };
 
   const deleteGroup = (groupIndex: number) => {
-    const newGroups = groups.filter((_, index) => index !== groupIndex);
-    setGroups(newGroups);
+    const newGroups = puzzleData.groups.filter((_, index) => index !== groupIndex);
+    setPuzzleData(prev => ({ ...prev, groups: newGroups }));
+  };
+
+  const saveDraft = async () => {
+    setIsLoading(true);
+    try {
+      const docRef = await addDoc(collection(clientDb, "puzzles"), {
+        ...puzzleData,
+        status: "draft",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      console.log("Draft saved with ID: ", docRef.id);
+      alert("Draft saved successfully!");
+    } catch (error) {
+      console.error("Error saving draft: ", error);
+      alert("Error saving draft. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const publishToFamily = async () => {
+    if (!puzzleData.title.trim()) {
+      alert("Please enter a title for your puzzle.");
+      return;
+    }
+
+    if (!puzzleData.publishDate) {
+      alert("Please select a publish date.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const docRef = await addDoc(collection(clientDb, "puzzles"), {
+        ...puzzleData,
+        status: "published",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        publishedAt: serverTimestamp(),
+      });
+      console.log("Puzzle published with ID: ", docRef.id);
+      alert("Puzzle published successfully!");
+    } catch (error) {
+      console.error("Error publishing puzzle: ", error);
+      alert("Error publishing puzzle. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,8 +170,8 @@ export default function CreatePuzzlePage() {
           <label className="text-sm font-medium text-slate-700">
             Title
             <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={puzzleData.title}
+              onChange={(e) => handleInputChange("title", e.target.value)}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
               placeholder="e.g. Cousin Sleepover Legends"
             />
@@ -109,8 +180,8 @@ export default function CreatePuzzlePage() {
             Publish date
             <input
               type="date"
-              value={publishDate}
-              onChange={(e) => setPublishDate(e.target.value)}
+              value={puzzleData.publishDate}
+              onChange={(e) => handleInputChange("publishDate", e.target.value)}
               className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
             />
           </label>
@@ -119,8 +190,8 @@ export default function CreatePuzzlePage() {
           Description (optional)
           <textarea
             rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={puzzleData.description}
+            onChange={(e) => handleInputChange("description", e.target.value)}
             className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-400"
             placeholder="Leave clues or instructions for your family."
           />
@@ -146,7 +217,7 @@ export default function CreatePuzzlePage() {
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {groups.map((group, groupIndex) => (
+          {puzzleData.groups.map((group, groupIndex) => (
             <article
               key={groupIndex}
               className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
@@ -213,7 +284,7 @@ export default function CreatePuzzlePage() {
       <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900">Preview grid</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {groups.flatMap((group) => group.cards).map((card, index) => (
+          {puzzleData.groups.flatMap((group) => group.cards).map((card, index) => (
             <button
               key={index}
               className="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-4 text-center text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400"
@@ -223,11 +294,19 @@ export default function CreatePuzzlePage() {
           ))}
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-            Save draft
+          <button
+            onClick={saveDraft}
+            disabled={isLoading}
+            className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white disabled:opacity-50 hover:bg-slate-800"
+          >
+            {isLoading ? "Saving..." : "Save draft"}
           </button>
-          <button className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            Publish to family
+          <button
+            onClick={publishToFamily}
+            disabled={isLoading}
+            className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 disabled:opacity-50 hover:bg-slate-50"
+          >
+            {isLoading ? "Publishing..." : "Publish to family"}
           </button>
           <button className="rounded-full border border-transparent px-6 py-3 text-sm font-semibold text-slate-600 underline-offset-2 hover:underline">
             Share preview link
